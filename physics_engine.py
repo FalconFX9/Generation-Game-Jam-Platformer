@@ -15,7 +15,7 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList):
     for platform in hit_list_y:
         if platform.color != moving_sprite.current_background:
             if moving_sprite.change_y > 0:
-                moving_sprite.top = platform.bottom - 5
+                moving_sprite.top = platform.bottom
                 if platform.change_y < 0:
                     moving_sprite.change_y = platform.change_y
                     moving_sprite.center_y += platform.change_y
@@ -82,6 +82,22 @@ class PhysicsEngine:
 
     def jump(self, velocity: int):
         self.player.change_y = velocity
+
+    def can_hang(self, hang_timer: int, y_distance=5) -> (bool, arcade.SpriteList):
+        self.player.center_y += y_distance
+        hit_list = arcade.check_for_collision_with_list(self.player, self.platforms)
+        self.player.center_y -= y_distance
+
+        if len(hit_list) > 0 and hit_list[0].color != self.player.current_background and hang_timer > 0:
+            return True, hit_list
+        else:
+            return False, arcade.SpriteList
+
+    def hang(self, hit_platform: arcade.SpriteList, hang_timer: int) -> int:
+        self.player.change_y = 0
+        self.player.top = hit_platform[0].bottom
+        hang_timer -= 1
+        return hang_timer
 
     def can_switch(self):
         hit_list = arcade.check_for_collision_with_list(self.player, self.platforms)
