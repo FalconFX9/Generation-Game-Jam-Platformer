@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pickle
 import arcade
 import random
 import math
@@ -10,6 +11,7 @@ import constants as C
 from player import Player
 from physics_engine import PhysicsEngine
 from generator_data import GeneratorData
+from time import sleep
 
 
 def resource_path(relative_path):
@@ -47,7 +49,10 @@ def multitile_platform(tiles: list, spritelist, x, y, number_of_platforms=0, typ
     tile = arcade.Sprite()
     tile.center_x = x
     tile.center_y = y
-    tile.texture = tiles[20]
+    if type == 0:
+        tile.texture = tiles[20]
+    else:
+        tile.texture = tiles[28]
     spritelist.append(tile)
     for i in range(number_of_platforms):
         tile = arcade.Sprite()
@@ -62,7 +67,10 @@ def multitile_platform(tiles: list, spritelist, x, y, number_of_platforms=0, typ
     tile = arcade.Sprite()
     tile.center_x = current_x + 32
     tile.center_y = y
-    tile.texture = tiles[22]
+    if type == 0:
+        tile.texture = tiles[22]
+    else:
+        tile.texture = tiles[30]
     spritelist.append(tile)
 
 
@@ -73,7 +81,6 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
 
     if not gen_data.seed:
         gen_data.seed = random.randint(0, 10000)
-    print('Seed: ' + str(gen_data.seed))
     # 2226
     # 3529 is a really fun seed, but has a few glitches at the end
     # 4384
@@ -85,7 +92,6 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
     platforms.append(platform)
     current_x = 800
     current_y = int(platform.center_y)
-    print(current_y)
     platform_number = 1
 
     while current_y > 90:
@@ -97,7 +103,17 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
             x_offset = rng.randint(300, 550)
             generated_y = rng.randint(current_y - 300, current_y - 150)
             for platform_num in range(-1, -platform_number - 2, -1):
+
                 if not platforms[platform_num].change_x or not platforms[platform_num].change_y:
+                    if platform_number == 0:
+                        platforms[platform_num].texture = tiles[9]
+                    else:
+                        if platform_num == -1:
+                            platforms[platform_num].texture = tiles[30]
+                        elif platform_num == -platform_number - 1:
+                            platforms[platform_num].texture = tiles[28]
+                        else:
+                            platforms[platform_num].texture = tiles[29]
                     if x_chance < gen_data.mv_chance_x:
                         platforms[platform_num].boundary_left = platforms[platform_num].center_x
                         platforms[platform_num].boundary_right = platforms[platform_num].center_x + x_offset
@@ -114,14 +130,12 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
                         ratio = x_distance / y_distance
                         platforms[platform_num].change_x = 3
                         platforms[platform_num].change_y = -(3 / ratio)
-                        print(x_distance, y_distance, ratio, x_distance/3, y_distance/(3/ratio))
         else:
             right_x = platforms[-1].center_x
             platform_number = rng.randint(0, gen_data.pl_num)
             platform_size = platform_number * 32
             if rng.random() < 0.5:
                 actual_offset = x_offset + rng.randint(0, platform_size)
-                print('Generated from left, offset being :', actual_offset)
                 generated_x = current_x - actual_offset
                 actual_offset -= platform_size
             else:
@@ -130,12 +144,10 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
                 else:
                     actual_offset = rng.randint(45, 160)
                 generated_x = right_x + actual_offset
-                print('Right x:', right_x)
-                print('Offset from right:', actual_offset)
             if actual_offset > 100:
                 mathx = actual_offset / 4
                 jump_height = -0.25 * (mathx**2) + 10 * mathx
-                print('Jump distance math :', actual_offset, jump_height, current_y - jump_height)
+
                 generated_y = rng.randint(int(current_y - jump_height), current_y)
             else:
                 generated_y = rng.randint(current_y - 90, current_y - 77)
@@ -148,13 +160,12 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
                 if platform.center_y < 56:
                     platform.center_y = 56
                 if platform_number == 0:
-                    one_tile_platform(tiles, platforms, platform.center_x, platform.center_y, rng.choice((0, 1)))
+                    one_tile_platform(tiles, platforms, platform.center_x, platform.center_y, rng.choice((0, 0)))
                 else:
                     multitile_platform(tiles, platforms, platform.center_x, platform.center_y, platform_number - 1)
             current_y = platform.center_y
             current_x = platform.center_x
-            print('Current x:', current_x)
-            print('Current y:', current_y)
+
             #if rng.random() < 0.05:
             #    ennemy = arcade.Sprite(":resources:images/space_shooter/playerShip1_green.png", 0.3)
             #    ennemy.center_x = platform.center_x
@@ -186,7 +197,7 @@ class FPSCounter:
 
 class Game(arcade.View):
 
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, level_manager=None):
         super().__init__()
 
         self.player_sprite = None
@@ -203,6 +214,7 @@ class Game(arcade.View):
         self.jump_needs_reset = False
         self.hang_timer = 40
         self.seed = seed
+        self.level_manager = level_manager
 
         self.mouse_press = False
 
@@ -219,7 +231,19 @@ class Game(arcade.View):
         self.jump_sound = None
         self.hang_sound = None
 
+        self.music = None
+
+    def play_song(self):
+        if not self.music:
+            self.music = arcade.Sound(resource_path(random.choice(['music/MenuSong.wav', 'music/S1-Beep.wav', 'music/S2-FastBeep.wav', 'music/S3-Nyoom.wav'])), streaming=True)
+        self.music.play(0.1)
+        sleep(0.03)
+
     def setup(self):
+        if self.music:
+            self.music.stop()
+        self.music = None
+        self.play_song()
         self.primitive_list = arcade.ShapeElementList()
         self.view_bottom = 0
         self.view_left = 0
@@ -229,7 +253,7 @@ class Game(arcade.View):
         self.platforms, self.ennemies = procedural_generator(self.seed)
         self.bullet_list = arcade.SpriteList()
 
-        self.player_sprite.center_x = self.platforms[-1].center_x
+        self.player_sprite.center_x = self.platforms[-1].center_x + 40
         self.player_sprite.bottom = 0
         self.physics_engine = PhysicsEngine(self.player_sprite, self.platforms)
         self.jump_sound = arcade.load_sound(resource_path('sounds/jump.wav'))
@@ -241,13 +265,16 @@ class Game(arcade.View):
     def on_draw(self):
         arcade.start_render()
 
+        if self.seed.tutorial:
+            arcade.draw_text(self.seed.tutorial, self.platforms[-1].center_x + 40, 100, arcade.color.WHITE, 30)
+
         self.platforms.draw()
         self.player_sprite.draw()
         self.ennemies.draw()
         if self.hang_timer > 0 and self.space_pressed and len(self.primitive_list) > 0:
             self.primitive_list.draw()
         self.bullet_list.draw()
-        if self.mouse_press:
+        if False is True:
             arcade.draw_arc_outline(800 + self.view_left, 450 + self.view_bottom, 300, 300, arcade.color.YELLOW, 0, 180, 15)
             arcade.draw_arc_outline(800 + self.view_left, 450 + self.view_bottom, 300, 300, arcade.color.BLUE, 180, 360, 15)
 
@@ -256,6 +283,10 @@ class Game(arcade.View):
         arcade.draw_text(output, 20 + self.view_left, C.SCREEN_HEIGHT + self.view_bottom - 40, arcade.color.WHITE, 16)
 
     def on_update(self, delta_time: float):
+        position = self.music.get_stream_position()
+
+        if position == 0.0:
+            self.play_song()
         hang_test = [False, 0]
         self.frame_count += 1
         self.player_sprite.current_background = self.window.background_color
@@ -288,7 +319,7 @@ class Game(arcade.View):
             else:
                 self.player_sprite.change_x = 0
 
-        self.physics_engine.update()
+        self.physics_engine.update(delta_time)
 
         if hang_test[0]:
             if self.player_sprite.change_x > 0:
@@ -374,10 +405,26 @@ class Game(arcade.View):
                                 self.view_bottom,
                                 C.SCREEN_HEIGHT + self.view_bottom)
 
-        if self.player_sprite.top >= self.platforms[0].center_y + 95:
+        if self.player_sprite.top >= self.platforms[0].center_y + 125 and self.platforms[0].left < self.player_sprite.center_x < self.platforms[0].right:
+            if self.level_manager:
+                self.seed = self.level_manager.levels[self.seed.lvl_id + 1]
+                if self.seed.lvl_id == self.level_manager.current_level.lvl_id + 1:
+                    self.level_manager.current_level = self.level_manager.levels[self.seed.lvl_id + 1]
+                    pickle_out = open(resource_path('data/current_level.save'), 'wb')
+                    pickle.dump(self.seed.lvl_id, pickle_out)
+                    pickle_out.close()
+                self.setup()
+            else:
+                self.seed = None
+                self.setup()
+
+        if self.player_sprite.top <= self.view_bottom:
             self.setup()
 
         self.fps.tick()
+
+    def on_hide_view(self):
+        self.music.stop()
 
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.W:
@@ -389,10 +436,11 @@ class Game(arcade.View):
         elif symbol == arcade.key.R:
             self.setup()
         elif symbol == arcade.key.SPACE:
-            self.space_pressed = True
-        elif symbol == arcade.key.X:
-            image = arcade.get_image()
-            image.save('Screenshot.png')
+            if self.seed.lvl_id is None:
+                self.space_pressed = True
+            else:
+                if self.seed.lvl_id >= 11:
+                    self.space_pressed = True
         elif symbol == arcade.key.ESCAPE:
             from main import MainMenu
             self.window.show_view(MainMenu(self.window))
@@ -407,6 +455,8 @@ class Game(arcade.View):
             self.d_pressed = False
         elif symbol == arcade.key.SPACE:
             self.space_pressed = False
+
+    '''
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
         self.mouse_press = True
@@ -425,3 +475,5 @@ class Game(arcade.View):
                 else:
                     self.window.background_color = arcade.color.BLUE
                 self.prev_color = self.window.background_color
+                
+    '''

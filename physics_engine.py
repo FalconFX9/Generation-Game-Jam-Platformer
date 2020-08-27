@@ -2,13 +2,13 @@ import arcade
 import constants as C
 
 
-def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList):
+def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList, dt):
 
     if moving_sprite.bottom <= 0 and moving_sprite.change_y < 0:
         moving_sprite.change_y = 0
         moving_sprite.bottom = 0
 
-    moving_sprite.center_y += moving_sprite.change_y * moving_sprite.speed_multiplier
+    moving_sprite.center_y += moving_sprite.change_y * moving_sprite.speed_multiplier * (dt / (1/60))
 
     hit_list_y = arcade.check_for_collision_with_list(moving_sprite, platforms)
 
@@ -28,7 +28,7 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList):
                 if platform.change_x:
                     moving_sprite.momentum = platform.change_x
 
-    moving_sprite.center_x += (moving_sprite.change_x + moving_sprite.momentum) * moving_sprite.speed_multiplier
+    moving_sprite.center_x += (moving_sprite.change_x + moving_sprite.momentum) * moving_sprite.speed_multiplier * (dt / (1/60))
 
     hit_list_x = arcade.check_for_collision_with_list(moving_sprite, platforms)
 
@@ -105,15 +105,15 @@ class PhysicsEngine:
         else:
             return True
 
-    def update(self):
+    def update(self, dt):
         if not self.is_on_ladder():
-            self.player.change_y -= self.gravity_constant * self.player.speed_multiplier
+            self.player.change_y -= self.gravity_constant * self.player.speed_multiplier * (dt / (1/60))
 
-        _move_sprite(self.player, self.platforms)
+        _move_sprite(self.player, self.platforms, dt)
 
         for platform in self.platforms:
             if platform.change_x != 0 or platform.change_y != 0:
-                platform.center_x += platform.change_x * self.player.speed_multiplier
+                platform.center_x += platform.change_x * self.player.speed_multiplier * (dt / (1/60))
 
                 if platform.boundary_left is not None \
                         and platform.center_x <= platform.boundary_left:
@@ -134,7 +134,7 @@ class PhysicsEngine:
                     if platform.change_x > 0:
                         self.player.left = platform.right
 
-                platform.center_y += platform.change_y * self.player.speed_multiplier
+                platform.center_y += platform.change_y * self.player.speed_multiplier * (dt / (1/60))
 
                 if platform.boundary_top is not None \
                         and platform.center_y >= platform.boundary_top:
