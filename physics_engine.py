@@ -15,12 +15,10 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList):
     for platform in hit_list_y:
         if platform.color != moving_sprite.current_background:
             if moving_sprite.change_y > 0:
-                moving_sprite.top = platform.bottom
-                if platform.change_y < 0:
-                    moving_sprite.change_y = platform.change_y
-                    moving_sprite.center_y += platform.change_y
-                else:
+                if not platform.change_y:
+                    moving_sprite.top = platform.bottom
                     moving_sprite.change_y = 0
+
             elif moving_sprite.change_y < 0:
                 moving_sprite.bottom = platform.top
                 if platform.change_y > 0:
@@ -36,9 +34,9 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList):
 
     for platform in hit_list_x:
         if platform.color != moving_sprite.current_background and platform not in hit_list_y:
-            if moving_sprite.change_x > 0:
+            if moving_sprite.change_x > 0 and not platform.change_x:
                 moving_sprite.right = platform.left
-            elif moving_sprite.change_x < 0:
+            elif moving_sprite.change_x < 0 and not platform.change_x:
                 moving_sprite.left = platform.right
 
             moving_sprite.change_x = 0
