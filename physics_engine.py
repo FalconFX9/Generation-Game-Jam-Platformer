@@ -24,6 +24,7 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList, dt)
                 if platform.change_y:
                     if platform.change_y < 0:
                         moving_sprite.center_y -= 2
+                        moving_sprite.change_y = -3
                     else:
                         moving_sprite.change_y = 0
                 else:

@@ -233,6 +233,9 @@ class Game(arcade.View):
 
         self.music = None
 
+        self.music_enabled = True
+        self.sounds_enabled = True
+
     def play_song(self):
         if not self.music:
             self.music = arcade.Sound(resource_path(random.choice(
@@ -242,10 +245,19 @@ class Game(arcade.View):
         sleep(0.03)
 
     def setup(self):
+        try:
+            file = open(resource_path('data/settings.info'), 'rb')
+            info = pickle.load(file)
+            self.music_enabled = info[1]
+            self.sounds_enabled = info[2]
+        except FileNotFoundError:
+            self.music_enabled = True
+            self.sounds_enabled = True
         if self.music:
             self.music.stop()
         self.music = None
-        self.play_song()
+        if self.music_enabled:
+            self.play_song()
         self.primitive_list = arcade.ShapeElementList()
         self.view_bottom = 0
         self.view_left = 0
@@ -294,10 +306,11 @@ class Game(arcade.View):
         arcade.draw_text(output, 20 + self.view_left, C.SCREEN_HEIGHT + self.view_bottom - 40, arcade.color.WHITE, 16)
 
     def on_update(self, delta_time: float):
-        position = self.music.get_stream_position()
+        if self.music:
+            position = self.music.get_stream_position()
 
-        if position == 0.0:
-            self.play_song()
+            if position == 0.0:
+                self.play_song()
         hang_test = [False, 0]
         self.frame_count += 1
         self.player_sprite.current_background = self.window.background_color
@@ -307,14 +320,16 @@ class Game(arcade.View):
             jump_test = self.physics_engine.can_jump()
             if jump_test[0] and not self.jump_needs_reset:
                 self.physics_engine.jump(12 + jump_test[1])
-                arcade.play_sound(self.jump_sound, 0.01)
+                if self.sounds_enabled:
+                    arcade.play_sound(self.jump_sound, 0.01)
                 self.jump_needs_reset = True
                 self.hang_timer = 40
         if self.space_pressed:
             hang_test = self.physics_engine.can_hang(self.hang_timer)
             if hang_test[0]:
                 if self.hang_timer == 40:
-                    arcade.play_sound(self.hang_sound, 0.05)
+                    if self.sounds_enabled:
+                        arcade.play_sound(self.hang_sound, 0.05)
                 self.hang_timer = self.physics_engine.hang(hang_test[1], self.hang_timer)
         if self.a_pressed and not self.d_pressed:
             if self.player_sprite.change_x > - C.MAX_SPEED:
@@ -434,7 +449,7 @@ class Game(arcade.View):
                     pickle_out.close()
                     self.window.show_view(Victory(self.window))
             else:
-                self.seed = None
+                self.seed.seed = None
                 self.setup()
 
         if self.player_sprite.top <= self.view_bottom:
@@ -443,11 +458,10 @@ class Game(arcade.View):
         self.fps.tick()
 
     def on_hide_view(self):
-        self.music.stop()
+        if self.music:
+            self.music.stop()
 
     def on_key_press(self, symbol: int, modifiers: int):
-        if symbol == arcade.key.Z:
-            self.player_sprite.change_y = 12
         if symbol == arcade.key.W:
             self.w_pressed = True
         elif symbol == arcade.key.A:

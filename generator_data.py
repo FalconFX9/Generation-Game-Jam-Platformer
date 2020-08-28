@@ -15,7 +15,7 @@ class GeneratorData:
 
 
 level_list = [
-    GeneratorData(1243, 0, max_gap=120, max_height=1500, lvl_id=0, lvl_description='Intro', tutorial='W, A and D to move\nOh yeah and R to reset and ESC to go back to the menu'),
+    GeneratorData(1243, 0, max_gap=120, max_height=1500, lvl_id=0, lvl_description='Intro', tutorial='W, A and D to move\nOh yeah and R to reset and ESC to go back to the menu\nAnd jump up from the white platform to beat the level!'),
     GeneratorData(1864, 0, max_gap=120, max_height=1500, lvl_id=1, lvl_description='A second step'),
     GeneratorData(4084, 0.2, 0.5, 0, lvl_id=2, lvl_description='Ooo slidy', tutorial='Ooo a new feature!!! \n Sliding platforms \n PS: They pass on momentum'),
     GeneratorData(8764, 0.2, 0.5, 0, lvl_id=3, lvl_description='Platform go brr'),

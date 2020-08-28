@@ -126,11 +126,24 @@ class MainMenu(arcade.View):
         self.ui_manager = UIManager(window)
         self.menu_music = None
         self.level_manager = None
+        self.custom_settings = None
+        self.music = True
+        self.sounds = True
 
     def setup(self):
+        try:
+            file = open(resource_path('data/settings.info'), 'rb')
+            info = pickle.load(file)
+            self.custom_settings = info[0]
+            self.music = info[1]
+            self.sounds = info[2]
+        except FileNotFoundError:
+            self.custom_settings = generator_data.GeneratorData()
+
         self.level_manager = LevelManager(generator_data.level_list)
         arcade.set_background_color(arcade.color.BLACK)
-        self.play_song()
+        if self.music:
+            self.play_song()
         self.ui_manager.purge_ui_elements()
         self.window.set_viewport(0, C.SCREEN_WIDTH, 0, C.SCREEN_HEIGHT)
         play_button = PlayButton(self.window, self.ui_manager, self.level_manager, 'PLAY', self.window.width // 2, 500,
@@ -157,6 +170,25 @@ class MainMenu(arcade.View):
                                             border_color_press=arcade.color.WHITE)
 
         self.ui_manager.add_ui_element(play_button_endless)
+
+        play_button_custom = UIFlatButton('PLAY CUSTOM', self.window.width // 2, 600, 250, 50)
+        play_button_custom.set_style_attrs(font_color=arcade.color.BLACK,
+                                           font_color_hover=arcade.color.BLACK,
+                                           font_color_press=arcade.color.BLACK,
+                                           bg_color=arcade.color.GREEN,
+                                           bg_color_hover=(0, 150, 0),
+                                           bg_color_press=arcade.color.DARK_GREEN,
+                                           border_color=arcade.color.GREEN,
+                                           border_color_hover=arcade.color.WHITE,
+                                           border_color_press=arcade.color.WHITE)
+
+        self.ui_manager.add_ui_element(play_button_custom)
+
+        @play_button_custom.event('on_click')
+        def play():
+            click_sound()
+            self.ui_manager.purge_ui_elements()
+            self.window.show_view(Game(self.custom_settings))
 
         level_button = LevelMenuButton(self.window, self.ui_manager, self.level_manager, 'LEVEL MENU',
                                        self.window.width // 2, 400, 200, 50)
@@ -208,20 +240,23 @@ class MainMenu(arcade.View):
         sleep(0.03)
 
     def on_update(self, delta_time: float):
-        position = self.menu_music.get_stream_position()
+        if self.menu_music:
+            position = self.menu_music.get_stream_position()
 
-        if position == 0.0:
-            self.play_song()
+            if position == 0.0:
+                self.play_song()
 
     def on_show_view(self):
         self.setup()
 
     def on_hide_view(self):
         self.ui_manager.purge_ui_elements()
-        self.menu_music.stop()
+        if self.menu_music:
+            self.menu_music.stop()
 
     def on_draw(self):
         arcade.start_render()
+        arcade.draw_text(C.TITLE, self.window.width/2, C.SCREEN_HEIGHT - 100, arcade.color.RED, font_size=60, align='center', anchor_x='center', anchor_y='center')
 
 
 class LevelMenu(arcade.View):
@@ -268,10 +303,25 @@ class OptionsMenu(arcade.View):
         self.window = window
         self.ui_manager = UIManager(window)
         self.level_stats = generator_data.GeneratorData()
+        self.music = True
+        self.sounds = True
 
     def setup(self):
+        try:
+            file = open(resource_path('data/settings.info'), 'rb')
+            info = pickle.load(file)
+            self.level_stats = info[0]
+            self.music = info[1]
+            self.sounds = info[2]
+        except FileNotFoundError:
+            self.level_stats = generator_data.GeneratorData()
+
         arcade.set_background_color(arcade.color.BLACK)
-        seed_box = UIInputBox(100, C.SCREEN_HEIGHT - 100, 150, 40, 'Enter seed', 'seed_box')
+        if self.level_stats.seed:
+            text = str(self.level_stats.seed)
+        else:
+            text = 'Enter Seed'
+        seed_box = UIInputBox(100, C.SCREEN_HEIGHT - 100, 150, 40, text, 'seed_box')
 
         self.ui_manager.add_ui_element(seed_box)
 
@@ -279,16 +329,20 @@ class OptionsMenu(arcade.View):
         def set_seed():
             self.level_stats.seed = self.ui_manager.find_by_id('seed_box').text
 
-        self.create_input_box_mv('mv_chance_box', '20%', 'Value must be between 0 and 100%',
+        self.create_input_box_mv('mv_chance_box', str(int(self.level_stats.mv_chance * 100)) + '%', 'Value must be between 0 and 100%',
                                  [475, C.SCREEN_HEIGHT - 100, 500, 40], self.level_stats)
 
-        self.create_input_box_mv('mv_chance_x', '50%', 'Value must be between 0 and 100%',
+        self.create_input_box_mv('mv_chance_x', str(int(self.level_stats.mv_chance_x * 100)) + '%', 'Value must be between 0 and 100%',
                                  [475, C.SCREEN_HEIGHT - 300, 500, 40], self.level_stats)
 
-        self.create_input_box_mv('mv_chance_y', '50%', 'Value must be between 0 and 100%',
+        self.create_input_box_mv('mv_chance_y', str(int(self.level_stats.mv_chance_y * 100)) + '%', 'Value must be between 0 and 100%',
                                  [475, C.SCREEN_HEIGHT - 500, 500, 40], self.level_stats)
 
-        mv_allowed_xy = UIFlatButton('True', 275, C.SCREEN_HEIGHT - 700, width=100, height=40, id='mv_allowed_xy')
+        if self.level_stats.mv_chance_xy:
+            text = 'True'
+        else:
+            text = 'False'
+        mv_allowed_xy = UIFlatButton(text, 300, C.SCREEN_HEIGHT - 700, width=150, height=50, id='mv_allowed_xy')
         mv_allowed_xy.set_style_attrs(
             border_color_hover=arcade.color.WHITE,
             border_color_press=arcade.color.WHITE
@@ -306,10 +360,8 @@ class OptionsMenu(arcade.View):
                 output = True
             button.render()
             self.level_stats.mv_chance_xy = output
-            print(self.level_stats.seed, self.level_stats.mv_chance, self.level_stats.mv_chance_x,
-                  self.level_stats.mv_chance_y, self.level_stats.mv_chance_xy)
 
-        max_gap = UIInputBox(975, C.SCREEN_HEIGHT - 100, 400, 40, '160', 'max_gap')
+        max_gap = UIInputBox(975, C.SCREEN_HEIGHT - 100, 400, 40, str(self.level_stats.max_gap), 'max_gap')
 
         self.ui_manager.add_ui_element(max_gap)
 
@@ -329,7 +381,7 @@ class OptionsMenu(arcade.View):
 
             self.level_stats.max_gap = gap
 
-        max_height = UIInputBox(975, C.SCREEN_HEIGHT - 300, 400, 40, '2500', 'max_height')
+        max_height = UIInputBox(975, C.SCREEN_HEIGHT - 300, 400, 40, str(self.level_stats.max_height), 'max_height')
 
         self.ui_manager.add_ui_element(max_height)
 
@@ -349,7 +401,7 @@ class OptionsMenu(arcade.View):
 
             self.level_stats.max_height = height
 
-        max_platforms = UIInputBox(975, C.SCREEN_HEIGHT - 500, 400, 40, '10', 'max_platforms')
+        max_platforms = UIInputBox(975, C.SCREEN_HEIGHT - 500, 400, 40, str(self.level_stats.pl_num), 'max_platforms')
 
         self.ui_manager.add_ui_element(max_platforms)
 
@@ -381,10 +433,56 @@ class OptionsMenu(arcade.View):
         @return_to_menu.event('on_click')
         def return_to_menu():
             pickle_out = open('data/settings.info', 'wb')
-            pickle.dump(self.level_stats, pickle_out)
+            pickle.dump((self.level_stats, self.music, self.sounds), pickle_out)
             pickle_out.close()
             self.ui_manager.purge_ui_elements()
             self.window.show_view(MainMenu(self.window))
+
+        if self.music:
+            text = 'True'
+        else:
+            text = 'False'
+        music = UIFlatButton(text, 850, 200, width=150, height=50, id='music')
+        music.set_style_attrs(
+            border_color_hover=arcade.color.WHITE,
+            border_color_press=arcade.color.WHITE
+        )
+        self.ui_manager.add_ui_element(music)
+
+        @music.event('on_click')
+        def switch():
+            button = self.ui_manager.find_by_id('music')
+            if button.text == 'True':
+                button.text = 'False'
+                output = False
+            else:
+                button.text = 'True'
+                output = True
+            button.render()
+            self.music = output
+
+        if self.sounds:
+            text = 'True'
+        else:
+            text = 'False'
+        sounds = UIFlatButton(text, 1100, 200, width=150, height=50, id='sounds')
+        sounds.set_style_attrs(
+            border_color_hover=arcade.color.WHITE,
+            border_color_press=arcade.color.WHITE
+        )
+        self.ui_manager.add_ui_element(sounds)
+
+        @sounds.event('on_click')
+        def switch():
+            button = self.ui_manager.find_by_id('sounds')
+            if button.text == 'True':
+                button.text = 'False'
+                output = False
+            else:
+                button.text = 'True'
+                output = True
+            button.render()
+            self.sounds = output
 
     def create_input_box_mv(self, id, base_text, error_text, position, level_stats):
         mv_chance_box = UIInputBox(position[0], position[1], position[2], position[3], base_text, id)
@@ -405,7 +503,7 @@ class OptionsMenu(arcade.View):
                 arcade.play_sound(arcade.load_sound(resource_path('sounds/erro.mp3')), 0.05)
                 self.ui_manager.find_by_id(id).text = error_text
                 mv_chance = 0.2
-            if id == 'mv_chance':
+            if id == 'mv_chance_box':
                 self.level_stats.mv_chance = mv_chance
             elif id == 'mv_chance_x':
                 self.level_stats.mv_chance_x = mv_chance
@@ -425,6 +523,8 @@ class OptionsMenu(arcade.View):
         arcade.draw_text('Set the maximum length of the platforms:', 775, C.SCREEN_HEIGHT - 450,
                          arcade.color.WHITE, 30)
         arcade.draw_text('Textbox values require ENTER to be pressed to be set.', 25, 25, arcade.color.WHITE, 30)
+        arcade.draw_text('Music:', 775, C.SCREEN_HEIGHT - 650, arcade.color.WHITE, 30)
+        arcade.draw_text('Sounds:', 1025, C.SCREEN_HEIGHT - 650, arcade.color.WHITE, 30)
 
     def on_show_view(self):
         self.setup()
