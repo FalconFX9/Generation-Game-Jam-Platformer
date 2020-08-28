@@ -146,7 +146,7 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
                 generated_x = right_x + actual_offset
             if actual_offset > 100:
                 mathx = actual_offset / 4
-                jump_height = -0.25 * (mathx**2) + 10 * mathx
+                jump_height = -0.25 * (mathx ** 2) + 10 * mathx
 
                 generated_y = rng.randint(int(current_y - jump_height), current_y)
             else:
@@ -166,7 +166,7 @@ def procedural_generator(gen_data: GeneratorData) -> (arcade.SpriteList, arcade.
             current_y = platform.center_y
             current_x = platform.center_x
 
-            #if rng.random() < 0.05:
+            # if rng.random() < 0.05:
             #    ennemy = arcade.Sprite(":resources:images/space_shooter/playerShip1_green.png", 0.3)
             #    ennemy.center_x = platform.center_x
             #    ennemy.center_y = platform.center_y + 50
@@ -235,7 +235,9 @@ class Game(arcade.View):
 
     def play_song(self):
         if not self.music:
-            self.music = arcade.Sound(resource_path(random.choice(['music/MenuSong.wav', 'music/S1-Beep.wav', 'music/S2-FastBeep.wav', 'music/S3-Nyoom.wav'])), streaming=True)
+            self.music = arcade.Sound(resource_path(random.choice(
+                ['music/MenuSong.wav', 'music/S1-Beep.wav', 'music/S2-FastBeep.wav', 'music/S3-Nyoom.wav'])),
+                                      streaming=True)
         self.music.play(0.1)
         sleep(0.03)
 
@@ -268,6 +270,13 @@ class Game(arcade.View):
         if self.seed.tutorial:
             arcade.draw_text(self.seed.tutorial, self.platforms[-1].center_x + 40, 100, arcade.color.WHITE, 30)
 
+        if self.seed.lvl_id or self.seed.lvl_id == 0:
+            arcade.draw_text(f'Level: {self.seed.lvl_id + 1}', self.view_left + C.SCREEN_WIDTH - 20,
+                             self.view_bottom + C.SCREEN_HEIGHT - 40, arcade.color.WHITE, 20, anchor_x='right')
+        else:
+            arcade.draw_text(f'Seed: {self.seed.seed}', self.view_left + C.SCREEN_WIDTH - 20,
+                             self.view_bottom + C.SCREEN_HEIGHT - 40, arcade.color.WHITE, 20, anchor_x='right')
+
         self.platforms.draw()
         self.player_sprite.draw()
         self.ennemies.draw()
@@ -275,8 +284,10 @@ class Game(arcade.View):
             self.primitive_list.draw()
         self.bullet_list.draw()
         if False is True:
-            arcade.draw_arc_outline(800 + self.view_left, 450 + self.view_bottom, 300, 300, arcade.color.YELLOW, 0, 180, 15)
-            arcade.draw_arc_outline(800 + self.view_left, 450 + self.view_bottom, 300, 300, arcade.color.BLUE, 180, 360, 15)
+            arcade.draw_arc_outline(800 + self.view_left, 450 + self.view_bottom, 300, 300, arcade.color.YELLOW, 0, 180,
+                                    15)
+            arcade.draw_arc_outline(800 + self.view_left, 450 + self.view_bottom, 300, 300, arcade.color.BLUE, 180, 360,
+                                    15)
 
         fps = self.fps.get_fps()
         output = f"FPS: {fps:3.0f}"
@@ -331,7 +342,7 @@ class Game(arcade.View):
                 self.player_sprite.center_y + 30,
                 self.hang_timer,
                 5,
-                (255 - int(self.hang_timer * (255/40)), int(self.hang_timer * (255/40)), 0)))
+                (255 - int(self.hang_timer * (255 / 40)), int(self.hang_timer * (255 / 40)), 0)))
             self.primitive_list.append(arcade.create_rectangle_outline(
                 self.player_sprite.center_x + 40,
                 self.player_sprite.center_y + 30,
@@ -353,7 +364,7 @@ class Game(arcade.View):
 
                 enemy.angle = math.degrees(angle) - 90
 
-                #if self.frame_count % 30 == 0:
+                # if self.frame_count % 30 == 0:
                 #    bullet = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", 0.5)
                 #    bullet.center_x = start_x
                 #    bullet.center_y = start_y
@@ -405,15 +416,23 @@ class Game(arcade.View):
                                 self.view_bottom,
                                 C.SCREEN_HEIGHT + self.view_bottom)
 
-        if self.player_sprite.top >= self.platforms[0].center_y + 125 and self.platforms[0].left < self.player_sprite.center_x < self.platforms[0].right:
+        if self.player_sprite.top >= self.platforms[0].center_y + 125 and self.platforms[
+            0].left < self.player_sprite.center_x < self.platforms[0].right:
             if self.level_manager:
-                self.seed = self.level_manager.levels[self.seed.lvl_id + 1]
-                if self.seed.lvl_id == self.level_manager.current_level.lvl_id + 1:
-                    self.level_manager.current_level = self.level_manager.levels[self.seed.lvl_id + 1]
+                if self.seed.lvl_id + 1 < len(self.level_manager.levels):
+                    self.seed = self.level_manager.levels[self.seed.lvl_id + 1]
+                    if self.seed.lvl_id == self.level_manager.current_level.lvl_id + 1:
+                        self.level_manager.current_level = self.level_manager.levels[self.seed.lvl_id]
+                        pickle_out = open(resource_path('data/current_level.save'), 'wb')
+                        pickle.dump(self.seed.lvl_id, pickle_out)
+                        pickle_out.close()
+                    self.setup()
+                else:
+                    from main import Victory
                     pickle_out = open(resource_path('data/current_level.save'), 'wb')
-                    pickle.dump(self.seed.lvl_id, pickle_out)
+                    pickle.dump(self.seed.lvl_id + 1, pickle_out)
                     pickle_out.close()
-                self.setup()
+                    self.window.show_view(Victory(self.window))
             else:
                 self.seed = None
                 self.setup()
@@ -427,6 +446,8 @@ class Game(arcade.View):
         self.music.stop()
 
     def on_key_press(self, symbol: int, modifiers: int):
+        if symbol == arcade.key.Z:
+            self.player_sprite.change_y = 12
         if symbol == arcade.key.W:
             self.w_pressed = True
         elif symbol == arcade.key.A:

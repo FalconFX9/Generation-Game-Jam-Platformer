@@ -21,10 +21,13 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList, dt)
 
             elif moving_sprite.change_y < 0:
                 moving_sprite.bottom = platform.top
-                if platform.change_y > 0:
-                    moving_sprite.change_y = 0
+                if platform.change_y:
+                    if platform.change_y < 0:
+                        moving_sprite.center_y -= 2
+                    else:
+                        moving_sprite.change_y = 0
                 else:
-                    moving_sprite.change_y = -3
+                    moving_sprite.change_y = 0
                 if platform.change_x:
                     moving_sprite.momentum = platform.change_x
 
@@ -39,7 +42,11 @@ def _move_sprite(moving_sprite: arcade.Sprite, platforms: arcade.SpriteList, dt)
             elif moving_sprite.change_x < 0 and not platform.change_x:
                 moving_sprite.left = platform.right
 
-            moving_sprite.change_x = 0
+            if platform.change_y:
+                if platform.change_y >= 0:
+                    moving_sprite.change_x = 0
+            else:
+                moving_sprite.change_x = 0
 
     if len(hit_list_y) <= 0 and moving_sprite.momentum != 0:
         moving_sprite.change_x += moving_sprite.momentum
