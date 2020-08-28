@@ -432,7 +432,7 @@ class OptionsMenu(arcade.View):
 
         @return_to_menu.event('on_click')
         def return_to_menu():
-            pickle_out = open('data/settings.info', 'wb')
+            pickle_out = open(resource_path('data/settings.info'), 'wb')
             pickle.dump((self.level_stats, self.music, self.sounds), pickle_out)
             pickle_out.close()
             self.ui_manager.purge_ui_elements()
